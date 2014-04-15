@@ -1,0 +1,52 @@
+{
+  ;;init
+}
+{
+  ;Body this runs every time the contract recieves a transaction
+  (when (calldatasize) ;; Check if data attached
+    {
+      (when (= (SLOAD 0x01) 0) ;; if storage has zero value / first caller	
+	{
+	  (SSTORE 0x01 (caller))
+	  (SSTORE 0x02 (callvalue))
+	  (stop)
+	}
+      )
+      
+      (when (= (SLOAD 0x11) 0) ;; counter party not yet joined / second caller
+	{
+	  (when (= (SLOAD 0x02) (callvalue))  ;; same value
+	    {
+	      (SSTORE 0x11 (caller))
+	      (SSTORE 0x12 (callvalue))
+	      
+	      ;; Store current Block number
+	      (SSTORE 0x50 (number))
+	    }
+	  )
+	  (stop)
+	  }
+      ) ;; end counter party
+    }
+  );; end when
+  
+  ;; else (3. call reactivate (check block / random result)
+  (when (< (+ 5 (SLOAD 0x50)) (number)) ;; more than 6 blocks found in the meantime
+    {
+      (MSTORE 0x60 (* (SLOAD 0x02) 2) ) ;; calculate checkpout money
+    
+      ;; random check (if >49 player 1 wins)
+      (when (< ((BYTE 0 (prevhash)) 127)  ;; lclc do something cat
+	{
+	  (call (SLOAD 0x01) (SLOAD 0x60) 0 0 0 0 0 1 0)
+	  (stop)
+	}
+      )
+      ;; else
+      {
+	(call (SLOAD 0x11) (SLOAD 0x60) 0 0 0 0 0 1 0)
+      } ;; end else
+      (suicide)
+    }
+  )
+}
